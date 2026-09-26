@@ -80,7 +80,7 @@ export default function Register() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="e.g. Mihir Patel"
+                    placeholder="Enter your full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
@@ -97,7 +97,7 @@ export default function Register() {
                   <input
                     type="email"
                     className="form-control"
-                    placeholder="e.g. mihir@gmail.com"
+                    placeholder="Enter your email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

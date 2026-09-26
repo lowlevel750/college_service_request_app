@@ -11,9 +11,7 @@ export default function StaffRequestDetails() {
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
-  const [staffId, setStaffId] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [assigning, setAssigning] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -29,7 +27,6 @@ export default function StaffRequestDetails() {
       const data = await staffApi.getRequest(id);
       setRequest(data);
       setStatus(data.status);
-      setStaffId(data.assigned_to || '');
     } catch (err) {
       setError(err.message || 'Failed to load request details.');
     } finally {
@@ -50,26 +47,6 @@ export default function StaffRequestDetails() {
       setError(err.message || 'Failed to update status.');
     } finally {
       setUpdatingStatus(false);
-    }
-  };
-
-  const handleAssign = async (e) => {
-    e.preventDefault();
-    if (!staffId.trim()) {
-      setError('Please provide a staff identifier.');
-      return;
-    }
-    setAssigning(true);
-    setError('');
-    setSuccess('');
-    try {
-      await staffApi.assignRequest(id, staffId.trim());
-      setSuccess(`Request successfully assigned to ${staffId}.`);
-      fetchRequest();
-    } catch (err) {
-      setError(err.message || 'Failed to assign request.');
-    } finally {
-      setAssigning(false);
     }
   };
 
@@ -199,23 +176,26 @@ export default function StaffRequestDetails() {
 
             <hr className="my-4" />
 
-            {/* Staff Operations: Status & Assignment */}
-            <div className="row g-4">
-              {/* Update Status */}
-              <div className="col-md-6">
-                <div className="portal-card p-3 h-100 border">
-                  <h5 className="fw-bold mb-3">
+            {/* Staff Operations: Status Update Only */}
+            <div className="row justify-content-center">
+              <div className="col-md-8 col-lg-6">
+                <div className="portal-card p-4 border">
+                  <h5 className="fw-bold mb-2">
                     <i className="bi bi-arrow-repeat text-primary me-2"></i>
                     Update Status
                   </h5>
+                  <p className="text-muted small mb-3">
+                    As service staff, update the lifecycle status as you work on this request.
+                  </p>
                   <form onSubmit={handleStatusUpdate}>
                     <div className="mb-3">
-                      <label className="form-label small fw-semibold">New Status</label>
+                      <label className="form-label small fw-semibold">Lifecycle Status</label>
                       <select
                         className="form-select"
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
                         required
+                        disabled={updatingStatus}
                       >
                         <option value="NEW">NEW</option>
                         <option value="ASSIGNED">ASSIGNED</option>
@@ -228,50 +208,18 @@ export default function StaffRequestDetails() {
                     </div>
                     <button
                       type="submit"
-                      className="btn btn-primary btn-sm w-100 fw-semibold"
+                      className="btn btn-primary w-100 fw-semibold"
                       disabled={updatingStatus}
                     >
-                      {updatingStatus ? 'Updating...' : 'Update Status'}
+                      {updatingStatus ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                          Updating Status...
+                        </>
+                      ) : (
+                        'Update Status'
+                      )}
                     </button>
-                  </form>
-                </div>
-              </div>
-
-              {/* Assign Request */}
-              <div className="col-md-6">
-                <div className="portal-card p-3 h-100 border">
-                  <h5 className="fw-bold mb-3">
-                    <i className="bi bi-person-check text-primary me-2"></i>
-                    Assign to Staff
-                  </h5>
-                  <form onSubmit={handleAssign}>
-                    <div className="mb-3">
-                      <label className="form-label small fw-semibold">Staff Name / ID</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="e.g. Staff User or staff_01"
-                        value={staffId}
-                        onChange={(e) => setStaffId(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="d-flex gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm"
-                        onClick={() => setStaffId(currentUser?.name || 'Staff User')}
-                      >
-                        Assign to Me
-                      </button>
-                      <button
-                        type="submit"
-                        className="btn btn-primary btn-sm flex-fill fw-semibold"
-                        disabled={assigning}
-                      >
-                        {assigning ? 'Assigning...' : 'Save Assignment'}
-                      </button>
-                    </div>
                   </form>
                 </div>
               </div>

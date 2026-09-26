@@ -12,6 +12,9 @@ export default function StaffLeadRequestDetails() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const [staffId, setStaffId] = useState('');
+  const [staffMembers, setStaffMembers] = useState([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [isCustomStaff, setIsCustomStaff] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -20,7 +23,20 @@ export default function StaffLeadRequestDetails() {
 
   useEffect(() => {
     fetchRequest();
+    fetchStaffMembers();
   }, [id]);
+
+  const fetchStaffMembers = async () => {
+    setLoadingStaff(true);
+    try {
+      const data = await staffApi.getStaffMembers();
+      setStaffMembers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load staff directory:', err);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
 
   const fetchRequest = async () => {
     setLoading(true);
@@ -53,10 +69,16 @@ export default function StaffLeadRequestDetails() {
     }
   };
 
+  const handleAssignToMe = () => {
+    const myName = currentUser?.name || 'Service Lead';
+    setStaffId(myName);
+    setIsCustomStaff(false);
+  };
+
   const handleAssign = async (e) => {
     e.preventDefault();
     if (!staffId.trim()) {
-      setError('Please provide a staff identifier.');
+      setError('Please select or specify a staff member.');
       return;
     }
     setAssigning(true);
@@ -64,7 +86,7 @@ export default function StaffLeadRequestDetails() {
     setSuccess('');
     try {
       await staffApi.assignRequest(id, staffId.trim());
-      setSuccess(`Request successfully assigned to ${staffId}.`);
+      setSuccess(`Request successfully assigned to ${staffId.trim()}.`);
       fetchRequest();
     } catch (err) {
       setError(err.message || 'Failed to assign request.');
@@ -240,36 +262,125 @@ export default function StaffLeadRequestDetails() {
               {/* Assign Request */}
               <div className="col-md-6">
                 <div className="portal-card p-3 h-100 border">
-                  <h5 className="fw-bold mb-3">
-                    <i className="bi bi-person-check text-primary me-2"></i>
-                    Assign to Staff
-                  </h5>
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <h5 className="fw-bold mb-0">
+                      <i className="bi bi-person-check text-primary me-2"></i>
+                      Assign to Staff
+                    </h5>
+                    {loadingStaff && (
+                      <span className="spinner-border spinner-border-sm text-primary" role="status"></span>
+                    )}
+                  </div>
                   <form onSubmit={handleAssign}>
                     <div className="mb-3">
-                      <label className="form-label small fw-semibold">Staff Name / ID</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="e.g. Staff User or staff_01"
-                        value={staffId}
-                        onChange={(e) => setStaffId(e.target.value)}
-                        required
-                      />
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <label className="form-label small fw-semibold mb-0">Select Service Staff</label>
+                        {!isCustomStaff ? (
+                          <button
+                            type="button"
+                            className="btn btn-link btn-sm p-0 text-decoration-none small text-muted"
+                            onClick={() => {
+                              setIsCustomStaff(true);
+                              setStaffId('');
+                            }}
+                          >
+                            <i className="bi bi-pencil-square me-1"></i>Custom ID/Name
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-link btn-sm p-0 text-decoration-none small text-primary"
+                            onClick={() => {
+                              setIsCustomStaff(false);
+                              setStaffId(staffMembers[0]?.name || '');
+                            }}
+                          >
+                            <i className="bi bi-list-ul me-1"></i>Choose from Staff List
+                          </button>
+                        )}
+                      </div>
+
+                      {!isCustomStaff ? (
+                        <select
+                          className="form-select"
+                          value={staffId}
+                          onChange={(e) => {
+                            if (e.target.value === '__custom__') {
+                              setIsCustomStaff(true);
+                              setStaffId('');
+                            } else {
+                              setStaffId(e.target.value);
+                            }
+                          }}
+                          required
+                          disabled={assigning || loadingStaff}
+                        >
+                          <option value="">-- Choose Existing Service Staff --</option>
+                          {staffMembers.map((member) => (
+                            <option key={member.id || member.email} value={member.name}>
+                              {member.name} ({member.role ? member.role.replace(/_/g, ' ') : 'STAFF'}) - {member.email}
+                            </option>
+                          ))}
+                          {request?.assigned_to &&
+                            !staffMembers.some((m) => m.name === request.assigned_to) && (
+                              <option value={request.assigned_to}>
+                                {request.assigned_to} (Current Assignee)
+                              </option>
+                            )}
+                          <option value="__custom__">➕ Other / Enter Custom Name or ID...</option>
+                        </select>
+                      ) : (
+                        <div className="input-group">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Enter staff name or user ID..."
+                            value={staffId}
+                            onChange={(e) => setStaffId(e.target.value)}
+                            required
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={() => {
+                              setIsCustomStaff(false);
+                              setStaffId(staffMembers[0]?.name || '');
+                            }}
+                            title="Back to dropdown options"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                      <div className="form-text small mt-1">
+                        Pick an existing staff member from the dropdown or click Custom ID/Name.
+                      </div>
                     </div>
+
                     <div className="d-flex gap-2">
                       <button
                         type="button"
                         className="btn btn-outline-secondary btn-sm"
-                        onClick={() => setStaffId(currentUser?.name || 'Service Lead')}
+                        onClick={handleAssignToMe}
+                        disabled={assigning}
                       >
+                        <i className="bi bi-person-fill me-1"></i>
                         Assign to Me
                       </button>
                       <button
                         type="submit"
                         className="btn btn-primary btn-sm flex-fill fw-semibold"
-                        disabled={assigning}
+                        disabled={assigning || !staffId.trim()}
                       >
-                        {assigning ? 'Assigning...' : 'Save Assignment'}
+                        {assigning ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                            Assigning...
+                          </>
+                        ) : (
+                          'Save Assignment'
+                        )}
                       </button>
                     </div>
                   </form>

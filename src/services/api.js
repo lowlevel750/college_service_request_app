@@ -143,6 +143,7 @@ export const staffApi = {
       method: "PUT",
       body: JSON.stringify({ staff_id }),
     }),
+  getStaffMembers: () => apiRequest("/staff/members"),
   deleteRequest: (id) =>
     apiRequest(`/staff/requests/${id}`, {
       method: "DELETE",
